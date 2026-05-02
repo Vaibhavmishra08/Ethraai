@@ -7,198 +7,160 @@ import { ProjectDetails } from './components/ProjectDetails.jsx';
 import { NavItem } from './components/NavItem.jsx';
 import { Badge } from './components/Badge.jsx';
 
-const STORAGE_KEY = 'task-manager-local-db';
-const SESSION_KEY = 'task-manager-current-user';
-
-const defaultDatabase = {
-  users: [
-    {
-      id: 'admin',
-      name: 'Admin User',
-      email: 'admin@task.local',
-      password: 'admin123',
-      role: 'Admin',
-      createdAt: Date.now(),
-    },
-    {
-      id: 'member',
-      name: 'Team Member',
-      email: 'member@task.local',
-      password: 'member123',
-      role: 'Member',
-      createdAt: Date.now(),
-    },
-  ],
-  projects: [],
-  tasks: [],
-};
-
-const loadDatabase = () => {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultDatabase));
-      return defaultDatabase;
-    }
-
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object') {
-      throw new Error('Invalid data stored');
-    }
-
-    return parsed;
-  } catch (err) {
-    console.error('Failed to load local database:', err);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultDatabase));
-    return defaultDatabase;
-  }
-};
-
-const saveDatabase = (database) => {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(database));
-  } catch (err) {
-    console.error('Failed to save local database:', err);
-  }
-};
-
-const getSessionId = () => localStorage.getItem(SESSION_KEY);
-const saveSessionId = (id) => localStorage.setItem(SESSION_KEY, id);
-const clearSession = () => localStorage.removeItem(SESSION_KEY);
-
-const generateId = () => {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-};
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 export default function App() {
-  const [database, setDatabase] = useState(loadDatabase);
-  const [currentUser, setCurrentUser] = useState(() => {
-    const sessionId = getSessionId();
-    if (!sessionId) return null;
-
-    const stored = loadDatabase();
-    return stored.users.find((user) => user.id === sessionId) || null;
-  });
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [users, setUsers] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [tasks, setTasks] = useState([]);
   const [currentView, setCurrentView] = useState('dashboard');
   const [activeProjectId, setActiveProjectId] = useState(null);
 
-  useEffect(() => {
-    saveDatabase(database);
-  }, [database]);
-
-  const handleLogin = ({ email, password }) => {
-    const user = database.users.find((userItem) => userItem.email.toLowerCase() === email.toLowerCase());
-    if (!user) {
-      throw new Error('No account found with that email.');
-    }
-    if (user.password !== password) {
-      throw new Error('Email or password is incorrect.');
-    }
-
-    saveSessionId(user.id);
-    setCurrentUser(user);
-    setCurrentView('dashboard');
-    setActiveProjectId(null);
-  };
-
-  const handleRegister = ({ name, email, password }) => {
-    const normalizedEmail = email.toLowerCase();
-    if (database.users.some((userItem) => userItem.email.toLowerCase() === normalizedEmail)) {
-      throw new Error('That email is already registered.');
-    }
-
-    const newUser = {
-      id: generateId(),
-      name: name.trim(),
-      email: normalizedEmail,
-      password,
-      role: 'Member',
-      createdAt: Date.now(),
+  const apiRequest = async (endpoint, options = {}) => {
+    const token = localStorage.getItem('authToken');
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
+      ...options.headers,
     };
 
-    setDatabase((prev) => ({
-      ...prev,
-      users: [...prev.users, newUser],
-    }));
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      ...options,
+      headers,
+    });
 
-    saveSessionId(newUser.id);
-    setCurrentUser(newUser);
-    setCurrentView('dashboard');
-    setActiveProjectId(null);
-  };
-
-  const handleResetPassword = ({ email, password }) => {
-    const normalizedEmail = email.toLowerCase();
-    if (!database.users.some((userItem) => userItem.email.toLowerCase() === normalizedEmail)) {
-      throw new Error('No account found with that email.');
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Network error' }));
+      throw new Error(error.error || 'Request failed');
     }
 
-    setDatabase((prev) => ({
-      ...prev,
-      users: prev.users.map((userItem) =>
-        userItem.email.toLowerCase() === normalizedEmail ? { ...userItem, password } : userItem
-      ),
-    }));
+    return response.json();
+  };
+
+  const loadData = async () => {
+    try {
+      const [projectsData, tasksData] = await Promise.all([
+        apiRequest('/projects'),
+        // Tasks will be loaded per project
+      ]);
+      setProjects(projectsData);
+      setTasks([]); // Reset tasks, load when needed
+    } catch (err) {
+      console.error('Error loading data:', err);
+    }
+  };
+
+  const loadTasksForProject = async (projectId) => {
+    try {
+      const tasksData = await apiRequest(`/projects/${projectId}/tasks`);
+      setTasks(tasksData);
+    } catch (err) {
+      console.error('Error loading tasks:', err);
+    }
+  };
+
+  useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      // Verify token and set user
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setUser(payload);
+        loadData();
+      } catch (err) {
+        localStorage.removeItem('authToken');
+      }
+    }
+    setLoading(false);
+  }, []);
+
+  const handleLogin = async (credentials) => {
+    const response = await apiRequest('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(credentials),
+    });
+
+    localStorage.setItem('authToken', response.token);
+    setUser(response.user);
+    await loadData();
+  };
+
+  const handleRegister = async (userData) => {
+    const response = await apiRequest('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    });
+
+    localStorage.setItem('authToken', response.token);
+    setUser(response.user);
+    await loadData();
+  };
+
+  const handleResetPassword = async (resetData) => {
+    await apiRequest('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify(resetData),
+    });
   };
 
   const handleLogout = () => {
-    clearSession();
-    setCurrentUser(null);
+    localStorage.removeItem('authToken');
+    setUser(null);
+    setProjects([]);
+    setTasks([]);
+    setCurrentView('dashboard');
+    setActiveProjectId(null);
   };
 
-  const handleCreateProject = ({ name, description }) => {
-    const newProject = {
-      id: generateId(),
-      name: name.trim(),
-      description: description.trim(),
-      createdBy: currentUser?.id ?? 'unknown',
-      createdAt: Date.now(),
-    };
-
-    setDatabase((prev) => ({
-      ...prev,
-      projects: [...prev.projects, newProject],
-    }));
+  const handleCreateProject = async (projectData) => {
+    const newProject = await apiRequest('/projects', {
+      method: 'POST',
+      body: JSON.stringify(projectData),
+    });
+    setProjects(prev => [newProject, ...prev]);
   };
 
-  const handleCreateTask = ({ projectId, title, description, assignedTo, dueDate }) => {
-    const newTask = {
-      id: generateId(),
-      projectId,
-      title: title.trim(),
-      description: description.trim(),
-      assignedTo,
-      status: 'To Do',
-      dueDate,
-      createdBy: currentUser?.id ?? 'unknown',
-      createdAt: Date.now(),
-    };
-
-    setDatabase((prev) => ({
-      ...prev,
-      tasks: [...prev.tasks, newTask],
-    }));
+  const handleCreateTask = async (taskData) => {
+    const newTask = await apiRequest('/tasks', {
+      method: 'POST',
+      body: JSON.stringify(taskData),
+    });
+    setTasks(prev => [newTask, ...prev]);
   };
 
-  const handleUpdateTaskStatus = (taskId, status) => {
-    setDatabase((prev) => ({
-      ...prev,
-      tasks: prev.tasks.map((task) => (task.id === taskId ? { ...task, status } : task)),
-    }));
+  const handleUpdateTaskStatus = async (taskId, status) => {
+    const updatedTask = await apiRequest(`/tasks/${taskId}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    });
+    setTasks(prev => prev.map(task => task.id === taskId ? updatedTask : task));
   };
 
-  const users = database.users;
-  const projects = database.projects;
-  const tasks = database.tasks;
+  const handleProjectClick = (id) => {
+    setActiveProjectId(id);
+    setCurrentView('project-details');
+    loadTasksForProject(id);
+  };
 
-  if (!currentUser) {
-    return <SetupProfile onLogin={handleLogin} onRegister={handleRegister} onResetPassword={handleResetPassword} />;
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
   }
 
-  const activeProject = projects.find((project) => project.id === activeProjectId);
+  if (!user) {
+    return (
+      <SetupProfile
+        onLogin={handleLogin}
+        onRegister={handleRegister}
+        onResetPassword={handleResetPassword}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex font-sans">
@@ -207,10 +169,7 @@ export default function App() {
           <div className="bg-blue-600 p-2 rounded-lg text-white">
             <CheckCircle2 size={24} />
           </div>
-          <div>
-            <h1 className="text-xl font-bold">TaskSync</h1>
-            <p className="text-xs text-slate-200/70">Local task manager</p>
-          </div>
+          <h1 className="text-xl font-bold">TaskSync</h1>
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
@@ -218,71 +177,57 @@ export default function App() {
             icon={<LayoutDashboard />}
             label="Dashboard"
             active={currentView === 'dashboard'}
-            onClick={() => {
-              setCurrentView('dashboard');
-              setActiveProjectId(null);
-            }}
+            onClick={() => { setCurrentView('dashboard'); setActiveProjectId(null); }}
           />
           <NavItem
             icon={<FolderKanban />}
             label="Projects"
             active={currentView === 'projects' || currentView === 'project-details'}
-            onClick={() => {
-              setCurrentView('projects');
-              setActiveProjectId(null);
-            }}
+            onClick={() => { setCurrentView('projects'); setActiveProjectId(null); }}
           />
         </nav>
 
         <div className="p-4 border-t border-slate-200 dark:border-slate-800">
           <div className="flex items-center gap-3 px-3 py-2 mb-4">
             <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold">
-              {currentUser.name.charAt(0).toUpperCase()}
+              {user.name.charAt(0).toUpperCase()}
             </div>
-            <div>
-              <p className="text-sm font-medium">{currentUser.name}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">{currentUser.role}</p>
+            <div className="flex-1">
+              <p className="text-sm font-medium">{user.name}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{user.role}</p>
             </div>
+            <button
+              onClick={handleLogout}
+              className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+              title="Logout"
+            >
+              <LogOut size={16} />
+            </button>
           </div>
-          <button
-            onClick={handleLogout}
-            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition-colors"
-          >
-            <LogOut size={16} />
-            Sign Out
-          </button>
         </div>
       </aside>
 
       <main className="flex-1 overflow-auto">
-        <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-6 flex flex-col gap-4 sticky top-0 z-10">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-bold">
-                {currentView === 'dashboard' && 'My Dashboard'}
-                {currentView === 'projects' && 'All Projects'}
-                {currentView === 'project-details' && activeProject && activeProject.name}
-              </h2>
-            </div>
-            <Badge color={currentUser.role === 'Admin' ? 'purple' : 'blue'}>
-              {currentUser.role} Access
-            </Badge>
-          </div>
-          {currentView === 'project-details' && activeProject && (
-            <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-              <button
-                onClick={() => {
-                  setCurrentView('projects');
-                  setActiveProjectId(null);
-                }}
-                className="hover:text-blue-600 transition-colors"
-              >
-                Projects
-              </button>
-              <ChevronRight size={18} />
-              <span>{activeProject.name}</span>
-            </div>
-          )}
+        <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-6 flex justify-between items-center sticky top-0 z-10">
+          <h2 className="text-2xl font-bold flex items-center gap-2">
+            {currentView === 'dashboard' && 'My Dashboard'}
+            {currentView === 'projects' && 'All Projects'}
+            {currentView === 'project-details' && (
+              <>
+                <button
+                  onClick={() => setCurrentView('projects')}
+                  className="text-slate-500 hover:text-blue-600 transition-colors"
+                >
+                  Projects
+                </button>
+                <ChevronRight size={20} className="text-slate-400" />
+                {projects.find((p) => p.id === activeProjectId)?.name}
+              </>
+            )}
+          </h2>
+          <Badge color={user.role === 'Admin' ? 'purple' : 'blue'}>
+            {user.role} Access
+          </Badge>
         </header>
 
         <div className="p-8">
@@ -290,31 +235,25 @@ export default function App() {
             <Dashboard
               tasks={tasks}
               projects={projects}
-              userProfile={currentUser}
-              onProjectClick={(id) => {
-                setActiveProjectId(id);
-                setCurrentView('project-details');
-              }}
+              userProfile={user}
+              onProjectClick={handleProjectClick}
             />
           )}
           {currentView === 'projects' && (
             <ProjectsList
               projects={projects}
               tasks={tasks}
-              userProfile={currentUser}
-              onProjectClick={(id) => {
-                setActiveProjectId(id);
-                setCurrentView('project-details');
-              }}
+              userProfile={user}
+              onProjectClick={handleProjectClick}
               onCreateProject={handleCreateProject}
             />
           )}
-          {currentView === 'project-details' && activeProject && (
+          {currentView === 'project-details' && activeProjectId && (
             <ProjectDetails
-              project={activeProject}
-              tasks={tasks.filter((task) => task.projectId === activeProject.id)}
+              project={projects.find((p) => p.id === activeProjectId)}
+              tasks={tasks.filter((t) => t.project_id === activeProjectId)}
               users={users}
-              userProfile={currentUser}
+              userProfile={user}
               onCreateTask={handleCreateTask}
               onUpdateTaskStatus={handleUpdateTaskStatus}
             />
