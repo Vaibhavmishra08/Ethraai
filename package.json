@@ -1,0 +1,12 @@
+{
+  "name": "ethraai-root",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "build": "cd task-manager && npm run build",
+    "start": "cd task-manager && npm start"
+  },
+  "engines": {
+    "node": ">=18 <21"
+  }
+}
