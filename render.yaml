@@ -4,7 +4,7 @@ services:
     env: node
     plan: free
     branch: main
-    buildCommand: cd task-manager && npm ci && npm run build
+    buildCommand: cd task-manager && NPM_CONFIG_PRODUCTION=false npm ci && npm run build
     startCommand: cd task-manager && npm start
     envVars:
       - key: NODE_ENV
