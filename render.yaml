@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: ethraai-web
+    env: node
+    plan: free
+    branch: main
+    buildCommand: cd task-manager && npm ci && npm run build
+    startCommand: cd task-manager && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        value: "${JWT_SECRET}"
