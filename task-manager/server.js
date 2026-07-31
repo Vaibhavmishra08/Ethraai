@@ -18,7 +18,8 @@ app.use(cors());
 app.use(express.json());
 
 // Database setup
-const db = new sqlite3.Database(path.join(__dirname, 'database.db'));
+const dbPath = process.env.DB_PATH || path.join(__dirname, 'database.db');
+const db = new sqlite3.Database(dbPath);
 
 // Initialize database
 db.serialize(() => {
