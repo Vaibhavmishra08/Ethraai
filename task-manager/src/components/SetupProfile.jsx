@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Users, Lock, LogIn, UserPlus, CheckCircle2, Sparkles } from 'lucide-react';
+import { Users, Lock, CheckCircle2, Sparkles, Shield, Rocket } from 'lucide-react';
 
 const demoAccounts = [
-  { label: 'Admin demo', email: 'admin@task.local', password: 'admin123' },
-  { label: 'Member demo', email: 'member@task.local', password: 'member123' },
+  { label: 'Admin Access', email: 'admin@task.local', password: 'admin123', role: 'Admin', icon: Shield },
+  { label: 'Member Access', email: 'member@task.local', password: 'member123', role: 'Member', icon: Users },
 ];
 
 export function SetupProfile({ onLogin, onRegister, onResetPassword }) {
@@ -36,7 +36,6 @@ export function SetupProfile({ onLogin, onRegister, onResetPassword }) {
     e.preventDefault();
     resetError();
     setSubmitting(true);
-
     try {
       await onLogin({ email: loginEmail.trim(), password: loginPassword });
     } catch (err) {
@@ -50,11 +49,8 @@ export function SetupProfile({ onLogin, onRegister, onResetPassword }) {
     e.preventDefault();
     resetError();
     setSubmitting(true);
-
     try {
-      if (!name.trim()) {
-        throw new Error('Please enter your name.');
-      }
+      if (!name.trim()) throw new Error('Please enter your name.');
       await onRegister({ name: name.trim(), email: registerEmail.trim(), password: registerPassword });
     } catch (err) {
       setError(err.message || 'Registration failed.');
@@ -67,11 +63,8 @@ export function SetupProfile({ onLogin, onRegister, onResetPassword }) {
     e.preventDefault();
     resetError();
     setSubmitting(true);
-
     try {
-      if (resetPassword !== resetConfirm) {
-        throw new Error('Passwords do not match.');
-      }
+      if (resetPassword !== resetConfirm) throw new Error('Passwords do not match.');
       await onResetPassword({ email: resetEmail.trim(), password: resetPassword });
       setSuccess('Password reset successful. You can now sign in.');
       setMode('login');
@@ -85,275 +78,176 @@ export function SetupProfile({ onLogin, onRegister, onResetPassword }) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4">
-      <div className="grid gap-8 w-full max-w-5xl lg:grid-cols-[1.2fr_0.9fr]">
-        <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl p-10 sm:p-12 border border-slate-200 dark:border-slate-800">
-          <div className="flex items-center gap-4 mb-8">
-            <div className="rounded-3xl bg-blue-600 p-4 text-white">
-              <CheckCircle2 size={28} />
-            </div>
-            <div>
-              <p className="text-sm uppercase tracking-[0.3em] text-blue-600 dark:text-blue-400 font-semibold mb-2">TaskSync</p>
-              <h1 className="text-3xl font-bold">Welcome back</h1>
-              <p className="mt-3 text-slate-500 dark:text-slate-400 max-w-xl">
-                Access your workspace with local credentials, reset a password instantly, or jump in with a demo account.
-              </p>
+    <div className="min-h-screen bg-slate-950 flex font-sans overflow-hidden text-slate-100">
+      
+      {/* Left Pane - Dynamic Branding */}
+      <div className="hidden lg:flex flex-col justify-between w-1/2 p-12 relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 border-r border-slate-800/50">
+        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-blue-600/20 rounded-full blur-[120px] pointer-events-none mix-blend-screen animate-pulse-slow"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[100px] pointer-events-none mix-blend-screen"></div>
+        
+        <div className="relative z-10 flex items-center gap-3">
+          <div className="bg-gradient-to-br from-blue-500 to-purple-600 p-3 rounded-2xl text-white shadow-xl shadow-blue-500/20">
+            <CheckCircle2 size={32} />
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight">TaskSync</h1>
+        </div>
+
+        <div className="relative z-10 max-w-md mt-20">
+          <Badge color="blue" className="mb-6 inline-flex border border-blue-500/30 bg-blue-500/10 text-blue-300 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest backdrop-blur-md">Enterprise Ready</Badge>
+          <h2 className="text-5xl font-bold leading-tight mb-6">Manage tasks <br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">with elegance.</span></h2>
+          <p className="text-slate-400 text-lg leading-relaxed">
+            Experience a seamless workflow with strict role-based access controls. Admins manage the big picture, while members focus on getting things done.
+          </p>
+        </div>
+
+        <div className="relative z-10 mt-auto">
+          <div className="glass-card p-6 rounded-2xl border border-slate-700/50 bg-slate-800/30">
+            <p className="font-medium text-slate-200 mb-4 flex items-center gap-2"><Rocket size={18} className="text-purple-400"/> Quick Access Demos</p>
+            <div className="grid grid-cols-2 gap-4">
+              {demoAccounts.map((account) => {
+                const Icon = account.icon;
+                return (
+                  <button
+                    key={account.email}
+                    onClick={() => autofillDemo(account)}
+                    className="flex flex-col items-start gap-2 p-4 rounded-xl border border-slate-700/50 bg-slate-900/50 hover:bg-slate-800 transition-all hover:border-blue-500/50 text-left group"
+                  >
+                    <div className={`p-2 rounded-lg ${account.role === 'Admin' ? 'bg-purple-500/20 text-purple-400' : 'bg-blue-500/20 text-blue-400'} group-hover:scale-110 transition-transform`}>
+                      <Icon size={20} />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-sm text-slate-200">{account.label}</p>
+                      <p className="text-xs text-slate-500">{account.email}</p>
+                    </div>
+                  </button>
+                )
+              })}
             </div>
           </div>
+        </div>
+      </div>
 
-          <div className="flex gap-2 mb-7 overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950">
-            <button
-              type="button"
-              onClick={() => { setMode('login'); resetError(); }}
-              className={`flex-1 py-3 text-sm font-semibold transition ${mode === 'login' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-inner' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`}
-            >
-              Sign In
-            </button>
-            <button
-              type="button"
-              onClick={() => { setMode('register'); resetError(); }}
-              className={`flex-1 py-3 text-sm font-semibold transition ${mode === 'register' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-inner' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`}
-            >
-              Register
-            </button>
-            <button
-              type="button"
-              onClick={() => { setMode('reset'); resetError(); }}
-              className={`flex-1 py-3 text-sm font-semibold transition ${mode === 'reset' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-inner' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`}
-            >
-              Reset Password
-            </button>
+      {/* Right Pane - Auth Forms */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 relative bg-slate-950">
+        <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-900/10 via-slate-950 to-slate-950 pointer-events-none"></div>
+        
+        <div className="w-full max-w-md relative z-10 animate-slide-up">
+          <div className="mb-10 text-center lg:text-left">
+            <h2 className="text-3xl font-bold mb-2">Welcome Back</h2>
+            <p className="text-slate-400">Please enter your details to continue.</p>
+          </div>
+
+          <div className="flex gap-1 mb-8 overflow-hidden rounded-xl bg-slate-900/50 p-1 border border-slate-800/80 backdrop-blur-md">
+            {['login', 'register', 'reset'].map((m) => (
+              <button
+                key={m}
+                onClick={() => { setMode(m); resetError(); }}
+                className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 capitalize ${mode === m ? 'bg-slate-800 text-white shadow-md border border-slate-700/50' : 'text-slate-500 hover:text-slate-300'}`}
+              >
+                {m === 'reset' ? 'Recover' : m}
+              </button>
+            ))}
           </div>
 
           {(error || success) && (
-            <div className={`mb-6 rounded-2xl border p-4 text-sm ${error ? 'bg-red-50 border-red-200 text-red-700 dark:bg-red-950/50 dark:border-red-800 dark:text-red-300' : 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/50 dark:border-emerald-700 dark:text-emerald-200'}`}>
+            <div className={`mb-6 rounded-xl border p-4 text-sm backdrop-blur-md animate-fade-in ${error ? 'bg-red-950/30 border-red-900/50 text-red-300' : 'bg-emerald-950/30 border-emerald-900/50 text-emerald-300'}`}>
               {error || success}
             </div>
           )}
 
-          {mode === 'login' && (
-            <form onSubmit={handleLogin} className="space-y-5">
-              <div>
-                <label className="block text-sm font-medium mb-2">Email</label>
-                <div className="flex items-center gap-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 py-2">
-                  <Users className="text-slate-400" size={18} />
-                  <input
-                    type="email"
-                    required
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    className="w-full bg-transparent text-slate-900 dark:text-slate-100 outline-none"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Password</label>
-                <div className="flex items-center gap-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 py-2">
-                  <Lock className="text-slate-400" size={18} />
-                  <input
-                    type="password"
-                    required
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    placeholder="Enter your password"
-                    className="w-full bg-transparent text-slate-900 dark:text-slate-100 outline-none"
-                  />
-                </div>
-              </div>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="w-full rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {submitting ? 'Signing in...' : 'Sign In'}
-              </button>
-              <p className="text-sm text-slate-500 dark:text-slate-400 text-center">
-                New here?{' '}
-                <button type="button" onClick={() => setMode('register')} className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
-                  Create an account
-                </button>
-              </p>
-              <p className="text-center text-sm text-slate-400">
-                <button type="button" onClick={() => { setMode('reset'); resetError(); }} className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
-                  Forgot password?
-                </button>
-              </p>
-            </form>
-          )}
-
-          {mode === 'register' && (
-            <form onSubmit={handleRegister} className="space-y-5">
-              <div>
-                <label className="block text-sm font-medium mb-2">Full Name</label>
-                <div className="flex items-center gap-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 py-2">
-                  <Users className="text-slate-400" size={18} />
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Jane Doe"
-                    className="w-full bg-transparent text-slate-900 dark:text-slate-100 outline-none"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Email</label>
-                <div className="flex items-center gap-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 py-2">
-                  <Users className="text-slate-400" size={18} />
-                  <input
-                    type="email"
-                    required
-                    value={registerEmail}
-                    onChange={(e) => setRegisterEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    className="w-full bg-transparent text-slate-900 dark:text-slate-100 outline-none"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Password</label>
-                <div className="flex items-center gap-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 py-2">
-                  <Lock className="text-slate-400" size={18} />
-                  <input
-                    type="password"
-                    required
-                    value={registerPassword}
-                    onChange={(e) => setRegisterPassword(e.target.value)}
-                    placeholder="Choose a strong password"
-                    className="w-full bg-transparent text-slate-900 dark:text-slate-100 outline-none"
-                  />
-                </div>
-              </div>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="w-full rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {submitting ? 'Creating account...' : 'Register account'}
-              </button>
-              <p className="text-sm text-slate-500 dark:text-slate-400 text-center">
-                Already have an account?{' '}
-                <button type="button" onClick={() => setMode('login')} className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
-                  Sign in instead
-                </button>
-              </p>
-            </form>
-          )}
-
-          {mode === 'reset' && (
-            <form onSubmit={handleReset} className="space-y-5">
-              <div>
-                <label className="block text-sm font-medium mb-2">Email</label>
-                <div className="flex items-center gap-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 py-2">
-                  <Users className="text-slate-400" size={18} />
-                  <input
-                    type="email"
-                    required
-                    value={resetEmail}
-                    onChange={(e) => setResetEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    className="w-full bg-transparent text-slate-900 dark:text-slate-100 outline-none"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">New password</label>
-                <div className="flex items-center gap-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 py-2">
-                  <Lock className="text-slate-400" size={18} />
-                  <input
-                    type="password"
-                    required
-                    value={resetPassword}
-                    onChange={(e) => setResetPassword(e.target.value)}
-                    placeholder="New password"
-                    className="w-full bg-transparent text-slate-900 dark:text-slate-100 outline-none"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Confirm password</label>
-                <div className="flex items-center gap-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 py-2">
-                  <Lock className="text-slate-400" size={18} />
-                  <input
-                    type="password"
-                    required
-                    value={resetConfirm}
-                    onChange={(e) => setResetConfirm(e.target.value)}
-                    placeholder="Confirm new password"
-                    className="w-full bg-transparent text-slate-900 dark:text-slate-100 outline-none"
-                  />
-                </div>
-              </div>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="w-full rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {submitting ? 'Resetting password...' : 'Reset password'}
-              </button>
-            </form>
-          )}
-        </div>
-
-        <aside className="space-y-6 rounded-3xl border border-slate-200 dark:border-slate-800 bg-slate-950/95 p-8 text-slate-200 shadow-xl">
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-sky-500 to-cyan-500 p-6 text-white shadow-lg">
-            <div className="absolute inset-0 opacity-30 bg-white blur-2xl animate-pulse"></div>
-            <div className="relative">
-              <div className="flex items-center gap-3">
-                <div className="rounded-2xl bg-white/15 p-3 text-blue-50">
-                  <Sparkles size={20} />
+          <div className="glass-card p-8 rounded-3xl border border-slate-800/80 bg-slate-900/40 shadow-2xl">
+            {mode === 'login' && (
+              <form onSubmit={handleLogin} className="space-y-5 animate-fade-in">
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-slate-300">Email Address</label>
+                  <div className="flex items-center gap-3 rounded-xl bg-slate-950/50 border border-slate-800 px-4 py-3.5 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500/50 transition-all">
+                    <Users className="text-slate-500" size={18} />
+                    <input type="email" required value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} placeholder="name@company.com" className="w-full bg-transparent outline-none placeholder-slate-600 text-slate-100" />
+                  </div>
                 </div>
                 <div>
-                  <p className="text-xs uppercase tracking-[0.3em] text-sky-200 font-semibold">Onboarding</p>
-                  <h2 className="mt-3 text-2xl font-semibold">Launch fast with TaskSync</h2>
-                </div>
-              </div>
-              <p className="mt-4 text-sm text-slate-100/90 leading-6">
-                Create projects, assign tasks, and track progress instantly with a playful browser-first onboarding experience.
-              </p>
-              <div className="mt-6 space-y-4">
-                <div className="rounded-3xl bg-white/10 p-4 backdrop-blur transition hover:bg-white/20">
-                  <p className="text-sm font-semibold">Project board ready</p>
-                  <p className="text-xs text-slate-200/80">Start your first project in seconds.</p>
-                </div>
-                <div className="rounded-3xl bg-white/10 p-4 backdrop-blur transition hover:bg-white/20">
-                  <p className="text-sm font-semibold">Collaborate easily</p>
-                  <p className="text-xs text-slate-200/80">Add members and assign tasks quickly.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/90 p-5 text-sm text-slate-400">
-            <p className="font-semibold text-slate-100 mb-3">Demo accounts</p>
-            <div className="space-y-3">
-              {demoAccounts.map((account) => (
-                <button
-                  key={account.email}
-                  type="button"
-                  onClick={() => autofillDemo(account)}
-                  className="w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-left text-sm transition hover:border-blue-400 hover:bg-slate-900"
-                >
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <p className="font-semibold text-white">{account.label}</p>
-                      <p className="text-slate-500">{account.email}</p>
-                    </div>
-                    <span className="rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-300">Autofill</span>
+                  <label className="block text-sm font-medium mb-2 text-slate-300">Password</label>
+                  <div className="flex items-center gap-3 rounded-xl bg-slate-950/50 border border-slate-800 px-4 py-3.5 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500/50 transition-all">
+                    <Lock className="text-slate-500" size={18} />
+                    <input type="password" required value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} placeholder="••••••••" className="w-full bg-transparent outline-none placeholder-slate-600 text-slate-100" />
                   </div>
+                </div>
+                <button type="submit" disabled={submitting} className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 px-5 py-4 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition-all hover:shadow-blue-500/40 disabled:opacity-50 mt-4">
+                  {submitting ? 'Authenticating...' : 'Sign In'}
                 </button>
-              ))}
-            </div>
+              </form>
+            )}
+
+            {mode === 'register' && (
+              <form onSubmit={handleRegister} className="space-y-5 animate-fade-in">
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-slate-300">Full Name</label>
+                  <div className="flex items-center gap-3 rounded-xl bg-slate-950/50 border border-slate-800 px-4 py-3.5 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500/50 transition-all">
+                    <Sparkles className="text-slate-500" size={18} />
+                    <input type="text" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Doe" className="w-full bg-transparent outline-none placeholder-slate-600 text-slate-100" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-slate-300">Email Address</label>
+                  <div className="flex items-center gap-3 rounded-xl bg-slate-950/50 border border-slate-800 px-4 py-3.5 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500/50 transition-all">
+                    <Users className="text-slate-500" size={18} />
+                    <input type="email" required value={registerEmail} onChange={(e) => setRegisterEmail(e.target.value)} placeholder="name@company.com" className="w-full bg-transparent outline-none placeholder-slate-600 text-slate-100" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-slate-300">Password</label>
+                  <div className="flex items-center gap-3 rounded-xl bg-slate-950/50 border border-slate-800 px-4 py-3.5 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500/50 transition-all">
+                    <Lock className="text-slate-500" size={18} />
+                    <input type="password" required value={registerPassword} onChange={(e) => setRegisterPassword(e.target.value)} placeholder="Create a password" className="w-full bg-transparent outline-none placeholder-slate-600 text-slate-100" />
+                  </div>
+                </div>
+                <button type="submit" disabled={submitting} className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 px-5 py-4 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition-all hover:shadow-blue-500/40 disabled:opacity-50 mt-4">
+                  {submitting ? 'Creating...' : 'Create Account'}
+                </button>
+              </form>
+            )}
+
+            {mode === 'reset' && (
+              <form onSubmit={handleReset} className="space-y-5 animate-fade-in">
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-slate-300">Email Address</label>
+                  <div className="flex items-center gap-3 rounded-xl bg-slate-950/50 border border-slate-800 px-4 py-3.5 focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500/50 transition-all">
+                    <Users className="text-slate-500" size={18} />
+                    <input type="email" required value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} placeholder="name@company.com" className="w-full bg-transparent outline-none placeholder-slate-600 text-slate-100" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-slate-300">New Password</label>
+                  <div className="flex items-center gap-3 rounded-xl bg-slate-950/50 border border-slate-800 px-4 py-3.5 focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500/50 transition-all">
+                    <Lock className="text-slate-500" size={18} />
+                    <input type="password" required value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} placeholder="••••••••" className="w-full bg-transparent outline-none placeholder-slate-600 text-slate-100" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-slate-300">Confirm Password</label>
+                  <div className="flex items-center gap-3 rounded-xl bg-slate-950/50 border border-slate-800 px-4 py-3.5 focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500/50 transition-all">
+                    <Lock className="text-slate-500" size={18} />
+                    <input type="password" required value={resetConfirm} onChange={(e) => setResetConfirm(e.target.value)} placeholder="••••••••" className="w-full bg-transparent outline-none placeholder-slate-600 text-slate-100" />
+                  </div>
+                </div>
+                <button type="submit" disabled={submitting} className="w-full rounded-xl bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 px-5 py-4 text-sm font-semibold text-white shadow-lg shadow-purple-500/25 transition-all hover:shadow-purple-500/40 disabled:opacity-50 mt-4">
+                  {submitting ? 'Resetting...' : 'Reset Password'}
+                </button>
+              </form>
+            )}
           </div>
-          <div className="rounded-3xl bg-slate-900/90 p-4 text-sm text-slate-400">
-            <p className="font-semibold text-slate-100">Local first</p>
-            <p className="mt-2 leading-6">
-              All account data is stored locally in your browser for fast testing. Passwords are not encrypted, so use this only for demo purposes.
-            </p>
-          </div>
-        </aside>
+          
+          <p className="text-center text-xs text-slate-600 mt-8">
+            © 2026 TaskSync Inc. All rights reserved.
+          </p>
+        </div>
       </div>
     </div>
   );
 }
+
+// Temporary Badge component inline to avoid import issues if it changed
+function Badge({ children, color, className }) {
+  return <span className={className}>{children}</span>;
+}
+

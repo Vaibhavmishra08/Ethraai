@@ -146,8 +146,10 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-slate-50/50 dark:bg-slate-950/50 backdrop-blur-sm">
+        <div className="animate-pulse-slow">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400"></div>
+        </div>
       </div>
     );
   }
@@ -163,13 +165,13 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex font-sans">
-      <aside className="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col">
-        <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3">
-          <div className="bg-blue-600 p-2 rounded-lg text-white">
-            <CheckCircle2 size={24} />
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex font-sans transition-colors duration-300">
+      <aside className={`w-64 glass border-r flex flex-col z-20 ${user.role === 'Admin' ? 'border-purple-500/20 bg-slate-900/50' : 'border-slate-200/50 dark:border-slate-800/50'}`}>
+        <div className={`p-6 border-b flex items-center gap-3 ${user.role === 'Admin' ? 'border-purple-500/20' : 'border-slate-200/50 dark:border-slate-800/50'}`}>
+          <div className={`p-2 rounded-xl text-white shadow-lg ${user.role === 'Admin' ? 'bg-gradient-to-br from-purple-600 to-indigo-600 shadow-purple-500/20' : 'bg-gradient-to-br from-blue-600 to-cyan-600 shadow-blue-500/20'}`}>
+            <CheckCircle2 size={24} className="animate-fade-in" />
           </div>
-          <h1 className="text-xl font-bold">TaskSync</h1>
+          <h1 className={`text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r ${user.role === 'Admin' ? 'from-purple-400 to-indigo-400' : 'from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400'}`}>TaskSync</h1>
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
@@ -187,13 +189,13 @@ export default function App() {
           />
         </nav>
 
-        <div className="p-4 border-t border-slate-200 dark:border-slate-800">
+        <div className={`p-4 border-t ${user.role === 'Admin' ? 'border-purple-500/20 bg-purple-900/10' : 'border-slate-200/50 dark:border-slate-800/50'}`}>
           <div className="flex items-center gap-3 px-3 py-2 mb-4">
-            <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold">
-              {user.name.charAt(0).toUpperCase()}
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-md ${user.role === 'Admin' ? 'bg-purple-600 shadow-purple-500/30' : 'bg-blue-600 shadow-blue-500/30'}`}>
+              {(user.name || 'U').charAt(0).toUpperCase()}
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium">{user.name}</p>
+              <p className="text-sm font-medium">{user.name || 'User'}</p>
               <p className="text-xs text-slate-500 dark:text-slate-400">{user.role}</p>
             </div>
             <button
@@ -207,11 +209,12 @@ export default function App() {
         </div>
       </aside>
 
-      <main className="flex-1 overflow-auto">
-        <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-6 flex justify-between items-center sticky top-0 z-10">
+      <main className={`flex-1 overflow-auto relative ${user.role === 'Admin' ? 'bg-slate-950/80' : 'bg-slate-50/50 dark:bg-slate-950/50'}`}>
+        <div className={`absolute top-0 left-0 w-full h-96 pointer-events-none bg-gradient-to-b ${user.role === 'Admin' ? 'from-purple-900/10 to-transparent' : 'from-blue-500/5 to-transparent dark:from-blue-500/10'}`}></div>
+        <header className={`glass-card sticky top-0 z-10 m-4 rounded-2xl p-6 flex justify-between items-center animate-slide-up ${user.role === 'Admin' ? 'border-purple-500/20 bg-slate-900/60' : ''}`}>
           <h2 className="text-2xl font-bold flex items-center gap-2">
-            {currentView === 'dashboard' && 'My Dashboard'}
-            {currentView === 'projects' && 'All Projects'}
+            {currentView === 'dashboard' && (user.role === 'Admin' ? 'Admin Overview' : 'My Workspace')}
+            {currentView === 'projects' && (user.role === 'Admin' ? 'Project Directory' : 'My Projects')}
             {currentView === 'project-details' && (
               <>
                 <button

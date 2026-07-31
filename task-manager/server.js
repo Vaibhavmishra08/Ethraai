@@ -88,6 +88,15 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
+// Middleware to enforce Admin role
+const requireAdmin = (req, res, next) => {
+  if (req.user && req.user.role === 'Admin') {
+    next();
+  } else {
+    res.status(403).json({ error: 'Forbidden: Admin access required' });
+  }
+};
+
 // Auth routes
 app.post('/api/auth/login', (req, res) => {
   const { email, password } = req.body;
@@ -101,7 +110,7 @@ app.post('/api/auth/login', (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { id: user.id, email: user.email, name: user.name, role: user.role },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -137,7 +146,7 @@ app.post('/api/auth/register', (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: this.lastID, email, role: 'Member' },
+      { id: this.lastID, email, name, role: 'Member' },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -183,7 +192,7 @@ app.get('/api/projects', authenticateToken, (req, res) => {
   });
 });
 
-app.post('/api/projects', authenticateToken, (req, res) => {
+app.post('/api/projects', authenticateToken, requireAdmin, (req, res) => {
   const { name, description } = req.body;
 
   if (!name) return res.status(400).json({ error: 'Project name required' });
@@ -216,7 +225,7 @@ app.get('/api/projects/:projectId/tasks', authenticateToken, (req, res) => {
   });
 });
 
-app.post('/api/tasks', authenticateToken, (req, res) => {
+app.post('/api/tasks', authenticateToken, requireAdmin, (req, res) => {
   const { title, description, projectId, assignedTo } = req.body;
 
   if (!title || !projectId) {
